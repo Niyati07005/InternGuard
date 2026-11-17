@@ -1,0 +1,36 @@
+services:
+  - type: web
+    name: internguard-api
+    runtime: python
+    rootDir: backend
+    plan: 1c-2g
+    region: oregon
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.8
+      - key: ENVIRONMENT
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: internguard-db
+          property: connectionString
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: SESSION_COOKIE_SECURE
+        value: "true"
+      - key: SESSION_COOKIE_SAMESITE
+        value: none
+      - key: SESSION_MAX_AGE_SECONDS
+        value: "28800"
+      - key: CORS_ORIGINS
+        sync: false
+
+databases:
+  - name: internguard-db
+    databaseName: internguard
+    user: internguard
+    plan: 0.1c-256mb
+    region: oregon

@@ -1,0 +1,11 @@
+Dataset: Real / Fake Job Posting Prediction, Kaggle dataset version 1
+Dataset page: https://www.kaggle.com/datasets/shivamb/real-or-fake-fake-jobposting-prediction
+License reported by the Kaggle dataset metadata: CC0 1.0 Universal (Public Domain)
+License URL: https://creativecommons.org/publicdomain/zero/1.0/
+Dataset uploader: Shivam Bansal
+Acknowledged underlying source: Employment Scam Aegean Dataset (EMSCAD),
+University of the Aegean, Laboratory of Information & Communication Systems Security.
+
+The accompanying compressed CSV preserves only a combined text field and the
+fraudulent label from the source posting fields. This notice records the license
+and attribution stated on the Kaggle dataset page.
