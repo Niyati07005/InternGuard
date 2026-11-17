@@ -325,14 +325,20 @@ def delete_scan(scan_id: int, db: Session = Depends(get_db), user: User = Depend
 
 
 @router.get("/scans/{scan_id}/report.pdf")
-def download_report(scan_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+def download_report(
+    scan_id: int,
+    inline: bool = False,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
     scan = db.query(Scan).filter(Scan.id == scan_id, Scan.owner_user_id == user.id).first()
     if not scan:
         raise HTTPException(status_code=404, detail="Scan not found.")
+    disposition = "inline" if inline else "attachment"
     return Response(
         content=make_report(scan),
         media_type="application/pdf",
-        headers={"Content-Disposition": f'attachment; filename="internguard-scan-{scan.id}.pdf"'},
+        headers={"Content-Disposition": f'{disposition}; filename="internguard-scan-{scan.id}.pdf"'},
     )
 
 

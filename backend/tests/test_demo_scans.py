@@ -53,6 +53,16 @@ def test_demo_scans_are_labeled_idempotent_and_show_each_risk_level():
             for phrase in ("guaranteed placement", "security deposit", "sensitive information")
         )
 
+        scan_id = by_category["HIGH"]["scan_id"]
+        report_url = f"/api/scans/{scan_id}/report.pdf"
+        opened_report = client.get(report_url, params={"inline": "true"})
+        assert opened_report.status_code == 200
+        assert opened_report.headers["content-type"] == "application/pdf"
+        assert opened_report.headers["content-disposition"].startswith("inline;")
+        assert opened_report.content.startswith(b"%PDF-")
+        downloaded_report = client.get(report_url)
+        assert downloaded_report.headers["content-disposition"].startswith("attachment;")
+
         dashboard = client.get("/api/dashboard").json()
         assert dashboard["sample_data"] is True
         assert dashboard["sample_scan_count"] == 3
