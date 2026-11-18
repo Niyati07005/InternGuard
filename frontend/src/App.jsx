@@ -18,6 +18,59 @@ const NAV = [
   ["Scan History", Clock3], ["Settings", LockKeyhole],
 ];
 const COLORS = ["#22a06b", "#e7a331", "#e15b4e"];
+const PREVIEW_USER = { id: "preview", is_guest: true };
+const PREVIEW_SCANS = [
+  {
+    scan_id: "preview-low",
+    created_at: "2026-11-17T10:00:00Z",
+    job_title: "Software Engineering Intern",
+    company_name: "Northstar Analytics (Sample)",
+    scan_type: "job",
+    risk_score: 18,
+    risk_category: "LOW",
+    summary: "Clear role details and a standard interview process.",
+    sample_data: true,
+  },
+  {
+    scan_id: "preview-medium",
+    created_at: "2026-11-12T10:00:00Z",
+    job_title: "Remote Data Entry Internship",
+    company_name: "BrightPath Staffing (Sample)",
+    scan_type: "job",
+    risk_score: 46,
+    risk_category: "MEDIUM",
+    summary: "A refundable registration fee is requested after selection.",
+    sample_data: true,
+  },
+  {
+    scan_id: "preview-high",
+    created_at: "2026-11-05T10:00:00Z",
+    job_title: "Guaranteed Remote Placement Program",
+    company_name: "Summit Career Group (Sample)",
+    scan_type: "job",
+    risk_score: 84,
+    risk_category: "HIGH",
+    summary: "A guaranteed placement is paired with upfront fees and urgency.",
+    sample_data: true,
+  },
+];
+const PREVIEW_DASHBOARD = {
+  total_scans: 3,
+  high_risk: 1,
+  medium_risk: 1,
+  low_risk: 1,
+  distribution: [
+    { name: "Low", value: 1 },
+    { name: "Medium", value: 1 },
+    { name: "High", value: 1 },
+  ],
+  monthly_trends: [{ month: "Nov", scans: 3, high_risk: 1 }],
+  scan_type_summary: [
+    { name: "Job analysis", value: 3 },
+    { name: "Offer letter", value: 0 },
+    { name: "URL verification", value: 0 },
+  ],
+};
 
 function RiskPill({ category }) {
   return <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-bold tracking-wide risk-${(category || "low").toLowerCase()}`}>{category || "LOW"} RISK</span>;
@@ -67,6 +120,7 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [showAuth, setShowAuth] = useState(false);
+  const [previewMode, setPreviewMode] = useState(false);
   const [dashboard, setDashboard] = useState(null);
   const [modelEvaluation, setModelEvaluation] = useState(null);
   const [demoLoading, setDemoLoading] = useState(false);
@@ -101,7 +155,14 @@ export default function App() {
         await refresh();
       })
       .catch(error => {
-        if (active && error.status !== 401) setNotice(error.message);
+        if (active && error.status !== 401) {
+          setPreviewMode(true);
+          setUser(PREVIEW_USER);
+          setDashboard(PREVIEW_DASHBOARD);
+          setScans(PREVIEW_SCANS);
+          setModelEvaluation(null);
+          setNotice("");
+        }
       })
       .finally(() => { if (active) setAuthLoading(false); });
     return () => { active = false; };
@@ -154,7 +215,7 @@ export default function App() {
       <p className="muted px-3 pb-2 text-[10px] font-bold uppercase tracking-[.13em]">Workspace</p>
       <nav className="flex flex-col gap-1">{NAV.map(([name,Icon])=><button key={name} onClick={()=>go(name)} className={`nav-link ${page===name?"active":""}`}><Icon size={17}/>{name}</button>)}</nav>
       <div className="sidebar-bottom mt-auto">
-        <div className="mb-4 rounded-xl border p-3" style={{borderColor:"var(--line)",background:"var(--soft)"}}><div className="flex items-center gap-2 text-xs font-semibold"><LockKeyhole size={14} className="text-emerald-600"/>Private by design</div><p className="muted mt-1.5 text-[11px] leading-4">{user.is_guest?"Guest scans are isolated to this browser session.":"Your scans are stored in your local SQLite database."}</p></div>
+        <div className="mb-4 rounded-xl border p-3" style={{borderColor:"var(--line)",background:"var(--soft)"}}><div className="flex items-center gap-2 text-xs font-semibold"><LockKeyhole size={14} className="text-emerald-600"/>{previewMode?"Prototype preview":"Private by design"}</div><p className="muted mt-1.5 text-[11px] leading-4">{previewMode?"Illustrative scans are temporary and are not saved.":user.is_guest?"Guest scans are isolated to this browser session.":"Your scans are stored in your local SQLite database."}</p></div>
         <button className="nav-link" onClick={()=>setDark(!dark)}>{dark?<Sun size={17}/>:<Moon size={17}/>}<span>{dark?"Switch to light mode":"Switch to dark mode"}</span><span className={`ml-auto h-5 w-9 rounded-full p-0.5 ${dark?"bg-blue-600":"bg-slate-300"}`}><span className={`block h-4 w-4 rounded-full bg-white transition-transform ${dark?"translate-x-4":""}`}/></span></button>
         <p className="muted px-3 pt-4 text-[10px]">INTERNGUARD · LOCAL DEMO</p>
       </div>
@@ -162,11 +223,11 @@ export default function App() {
     <main className="min-w-0 flex-1">
       <header className="sticky top-0 z-10 flex h-[68px] items-center justify-between border-b px-6 sm:px-9" style={{background:"var(--surface)",borderColor:"var(--line)"}}>
         <div><p className="muted text-xs">Workspace / <span style={{color:"var(--text)"}}>{page}</span></p></div>
-        <div className="flex items-center gap-3"><span className="hidden items-center gap-1.5 text-xs text-emerald-700 sm:flex"><span className="h-2 w-2 rounded-full bg-emerald-500"/> Local analysis active</span><span className="muted hidden max-w-48 truncate text-xs sm:block">{user.email || "Guest workspace"}</span>{user.is_guest?<button className="secondary text-xs" onClick={()=>setShowAuth(true)} title="Sign in or create an account">Sign in</button>:<button className="secondary p-2" onClick={logout} aria-label="Sign out" title="Sign out"><LogOut size={15}/></button>}<div className="grid h-8 w-8 place-items-center rounded-full bg-blue-50 text-xs font-semibold text-blue-700">IG</div></div>
+        <div className="flex items-center gap-3"><span className={`hidden items-center gap-1.5 text-xs sm:flex ${previewMode?"text-amber-700":"text-emerald-700"}`}><span className={`h-2 w-2 rounded-full ${previewMode?"bg-amber-500":"bg-emerald-500"}`}/>{previewMode?"Preview only":"Local analysis active"}</span><span className="muted hidden max-w-48 truncate text-xs sm:block">{user.email || (previewMode?"Prototype preview":"Guest workspace")}</span>{previewMode?<span className="muted text-xs">Read-only</span>:user.is_guest?<button className="secondary text-xs" onClick={()=>setShowAuth(true)} title="Sign in or create an account">Sign in</button>:<button className="secondary p-2" onClick={logout} aria-label="Sign out" title="Sign out"><LogOut size={15}/></button>}<div className="grid h-8 w-8 place-items-center rounded-full bg-blue-50 text-xs font-semibold text-blue-700">IG</div></div>
       </header>
       <div className="mx-auto max-w-[1440px] px-5 py-7 sm:px-9">
-        {notice && <div role="alert" className="mb-5 flex items-center justify-between rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"><span>{notice} — ensure the API is running.</span><button onClick={()=>setNotice("")}><X size={16}/></button></div>}
-        {page==="Dashboard" && <DashboardPage data={dashboard} modelEvaluation={modelEvaluation} scans={scans} go={go} onLoadDemo={loadDemoScans} demoLoading={demoLoading}/>}
+        {notice && <div role="alert" className={`mb-5 flex items-center justify-between rounded-lg border px-4 py-3 text-sm ${previewMode?"border-blue-200 bg-blue-50 text-blue-900":"border-red-200 bg-red-50 text-red-800"}`}><span>{previewMode?notice:`${notice} — ensure the API is running.`}</span><button onClick={()=>setNotice("")}><X size={16}/></button></div>}
+        {page==="Dashboard" && <DashboardPage data={dashboard} modelEvaluation={modelEvaluation} scans={scans} go={go} onLoadDemo={loadDemoScans} demoLoading={demoLoading} previewMode={previewMode}/>}
         {page==="Job & Internship Analyzer" && <AnalyzerPage refresh={refresh} setNotice={setNotice} openHistory={()=>go("Scan History")}/>}
         {page==="Offer Letter Scanner" && <OfferPage refresh={refresh} setNotice={setNotice} openHistory={()=>go("Scan History")}/>}
         {page==="URL & Company Verification" && <VerifyPage refresh={refresh} setNotice={setNotice} openHistory={()=>go("Scan History")}/>}
@@ -182,30 +243,30 @@ function PageHeading({eyebrow,title,description,action}) {
   return <div className="mb-7 flex flex-wrap items-end justify-between gap-4"><div><p className="mb-2 text-[11px] font-bold uppercase tracking-[.14em] text-blue-600">{eyebrow}</p><h1 className="text-2xl font-semibold tracking-tight sm:text-[28px]">{title}</h1><p className="muted mt-2 max-w-2xl text-sm leading-6">{description}</p></div>{action}</div>;
 }
 
-function DashboardPage({data,modelEvaluation,scans,go,onLoadDemo,demoLoading}) {
+function DashboardPage({data,modelEvaluation,scans,go,onLoadDemo,demoLoading,previewMode}) {
   const distribution = data?.distribution?.some(d=>d.value) ? data.distribution : [{name:"Low",value:0},{name:"Medium",value:0},{name:"High",value:0}];
   return <>
     <PageHeading eyebrow="Overview" title="Opportunity safety dashboard" description="A clear view of your recent checks and the risk signals they surfaced." action={<button className="primary" onClick={()=>go("Job & Internship Analyzer")}><BriefcaseBusiness size={16}/>Analyze opportunity</button>}/>
     <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      <Metric label="Total scans" value={data?.total_scans??"—"} note="All analyses saved locally" icon={Activity} tone="bg-blue-50 text-blue-600"/>
+      <Metric label="Total scans" value={data?.total_scans??"—"} note={previewMode?"Illustrative samples · not saved":"All analyses saved locally"} icon={Activity} tone="bg-blue-50 text-blue-600"/>
       <Metric label="High risk" value={data?.high_risk??"—"} note="Score 61–100 · review carefully" icon={ShieldAlert} tone="bg-red-50 text-red-600"/>
       <Metric label="Medium risk" value={data?.medium_risk??"—"} note="Score 31–60 · verify details" icon={AlertTriangle} tone="bg-amber-50 text-amber-600"/>
       <Metric label="Low risk" value={data?.low_risk??"—"} note="Score 0–30 · not a guarantee" icon={ShieldCheck} tone="bg-emerald-50 text-emerald-600"/>
     </div>
     <div className="mb-6 grid gap-5 xl:grid-cols-[1.4fr_1fr]">
-      <section className="surface p-5"><div className="mb-4 flex items-start justify-between"><div><h2 className="font-semibold">Scan activity</h2><p className="muted mt-1 text-xs">Monthly scans and high-risk findings from your database</p></div><Activity size={17} className="muted"/></div>
+      <section className="surface p-5"><div className="mb-4 flex items-start justify-between"><div><h2 className="font-semibold">Scan activity</h2><p className="muted mt-1 text-xs">{previewMode?"Illustrative monthly sample activity":"Monthly scans and high-risk findings from your database"}</p></div><Activity size={17} className="muted"/></div>
         {data?.monthly_trends?.length ? <div className="h-[240px]"><ResponsiveContainer width="100%" height="100%"><AreaChart data={data.monthly_trends}><defs><linearGradient id="scanFill" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stopColor="#3b82f6" stopOpacity={.2}/><stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/></linearGradient></defs><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e8edf3"/><XAxis dataKey="month" tickLine={false} axisLine={false} tick={{fontSize:11,fill:"#788497"}}/><YAxis allowDecimals={false} tickLine={false} axisLine={false} tick={{fontSize:11,fill:"#788497"}}/><Tooltip/><Area type="monotone" dataKey="scans" name="Scans" stroke="#3478e5" strokeWidth={2} fill="url(#scanFill)"/><Area type="monotone" dataKey="high_risk" name="High risk" stroke="#e15b4e" strokeWidth={2} fill="transparent"/></AreaChart></ResponsiveContainer></div>:<EmptyChart text="Your monthly scan trend will appear here after your first analysis."/>}
       </section>
-      <section className="surface p-5"><div className="mb-1"><h2 className="font-semibold">Risk distribution</h2><p className="muted mt-1 text-xs">Based on all saved scan results</p></div>
-        {data?.total_scans ? <div className="relative h-[225px]"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={distribution} innerRadius={62} outerRadius={88} paddingAngle={4} dataKey="value">{distribution.map((d,i)=><Cell key={d.name} fill={COLORS[i]}/>)}</Pie><Tooltip/></PieChart></ResponsiveContainer><div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center"><b className="text-2xl">{data.total_scans}</b><span className="muted text-[11px]">total scans</span></div></div>:<EmptyChart text="No risk data yet. Results from your own scans appear here."/>}
+      <section className="surface p-5"><div className="mb-1"><h2 className="font-semibold">Risk distribution</h2><p className="muted mt-1 text-xs">{previewMode?"Illustrative sample opportunities":"Based on all saved scan results"}</p></div>
+        {data?.total_scans ? <div className="relative h-[225px]"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={distribution} innerRadius={62} outerRadius={88} paddingAngle={4} dataKey="value">{distribution.map((d,i)=><Cell key={d.name} fill={COLORS[i]}/>)}</Pie><Tooltip/></PieChart></ResponsiveContainer><div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center"><b className="text-2xl">{data.total_scans}</b><span className="muted text-[11px]">{previewMode?"sample scans":"total scans"}</span></div></div>:<EmptyChart text="No risk data yet. Results from your own scans appear here."/>}
         <div className="flex justify-center gap-4">{distribution.map((d,i)=><span className="muted flex items-center gap-1.5 text-xs" key={d.name}><i className="h-2 w-2 rounded-full" style={{background:COLORS[i]}}/>{d.name} {d.value}</span>)}</div>
       </section>
     </div>
-    <section className="surface mb-6 p-5"><div className="mb-4"><h2 className="font-semibold">Opportunity analysis summary</h2><p className="muted mt-1 text-xs">Saved scans by type · database records only</p></div><div className="grid gap-3 sm:grid-cols-3">{(data?.scan_type_summary||[]).map((item,i)=><div key={item.name} className="rounded-lg p-4" style={{background:"var(--soft)"}}><p className="muted text-xs">{item.name}</p><p className="mt-1 text-2xl font-semibold">{item.value}</p></div>)}</div></section>
+    <section className="surface mb-6 p-5"><div className="mb-4"><h2 className="font-semibold">Opportunity analysis summary</h2><p className="muted mt-1 text-xs">{previewMode?"Illustrative preview data · not saved":"Saved scans by type · database records only"}</p></div><div className="grid gap-3 sm:grid-cols-3">{(data?.scan_type_summary||[]).map((item,i)=><div key={item.name} className="rounded-lg p-4" style={{background:"var(--soft)"}}><p className="muted text-xs">{item.name}</p><p className="mt-1 text-2xl font-semibold">{item.value}</p></div>)}</div></section>
     <ModelEvaluation data={modelEvaluation}/>
-    <section className="surface overflow-hidden"><div className="flex items-center justify-between px-5 py-4"><div><h2 className="font-semibold">Recent scan activity</h2><p className="muted mt-1 text-xs">Your latest analyzed opportunities</p></div><button onClick={()=>go("Scan History")} className="flex items-center gap-1 text-sm font-medium text-blue-600">View history <ArrowRight size={15}/></button></div>
+    <section className="surface overflow-hidden"><div className="flex items-center justify-between px-5 py-4"><div><h2 className="font-semibold">Recent scan activity</h2><p className="muted mt-1 text-xs">{previewMode?"Illustrative sample opportunities":"Your latest analyzed opportunities"}</p></div><button onClick={()=>go("Scan History")} className="flex items-center gap-1 text-sm font-medium text-blue-600">View history <ArrowRight size={15}/></button></div>
       {scans.length ? <div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead className="muted bg-slate-50/70 text-xs"><tr><th className="px-5 py-3 font-medium">Opportunity</th><th className="px-5 py-3 font-medium">Scan type</th><th className="px-5 py-3 font-medium">Date</th><th className="px-5 py-3 font-medium">Risk</th><th className="px-5 py-3 font-medium">Score</th></tr></thead><tbody>{scans.slice(0,5).map(s=><tr key={s.scan_id} className="table-row"><td className="px-5 py-3.5"><b>{s.job_title||"Link verification"}</b>{s.sample_data&&<span className="ml-2 rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700">SAMPLE</span>}<span className="muted mt-0.5 block text-xs">{s.company_name||"Company not provided"}</span></td><td className="muted px-5 py-3.5 capitalize">{s.scan_type.replace("_"," ")}</td><td className="muted px-5 py-3.5">{new Date(s.created_at).toLocaleDateString()}</td><td className="px-5 py-3.5"><RiskPill category={s.risk_category}/></td><td className="px-5 py-3.5 font-semibold">{s.risk_score}/100</td></tr>)}</tbody></table></div>:<div className="p-8 text-center"><div className="mx-auto mb-3 grid h-11 w-11 place-items-center rounded-full bg-blue-50 text-blue-600"><FileSearch size={20}/></div><p className="text-sm font-medium">No scans yet</p><p className="muted mt-1 text-xs">Analyze a job, check a URL, or review an offer letter to start.</p><button className="secondary mt-4" onClick={onLoadDemo} disabled={demoLoading}>{demoLoading?<LoaderCircle size={15} className="animate-spin"/>:<Activity size={15}/>}Load sample job scans</button><p className="muted mt-2 text-[11px]">Adds three illustrative scans—one per risk level—to this workspace.</p></div>}</section>
-    <p className="muted mt-4 text-[11px]">Charts and scan counts reflect your saved database records. Model performance is measured on the labeled dataset shown above.</p>
+    <p className="muted mt-4 text-[11px]">{previewMode?"Preview only: sample values are illustrative and model metrics are not loaded.":"Charts and scan counts reflect your saved database records. Model performance is measured on the labeled dataset shown above."}</p>
   </>;
 }
 
